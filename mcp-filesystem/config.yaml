@@ -1,0 +1,22 @@
+name: MCP Filesystem Server
+version: "1.0.0"
+slug: mcp-filesystem
+description: MCP server exposing read/write access to /config via HTTP/SSE
+url: https://github.com/Kokbo/ha-mcp-addons
+arch:
+  - aarch64
+ports:
+  3001/tcp: 3001
+ports_description:
+  3001/tcp: MCP HTTP/SSE server
+map:
+  - config:rw
+options:
+  port: 3001
+  allowed_paths:
+    - /config
+schema:
+  port: int
+  allowed_paths:
+    - str
+init: false

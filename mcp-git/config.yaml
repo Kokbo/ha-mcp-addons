@@ -1,0 +1,22 @@
+name: MCP Git Server
+version: "1.0.0"
+slug: mcp-git
+description: MCP server exposing git operations on /config via HTTP/SSE
+url: https://github.com/Kokbo/ha-mcp-addons
+arch:
+  - aarch64
+ports:
+  3002/tcp: 3002
+ports_description:
+  3002/tcp: MCP HTTP/SSE server
+map:
+  - config:rw
+options:
+  port: 3002
+  repo_path: /config
+  ssh_key_path: /config/.ssh/id_rsa
+schema:
+  port: int
+  repo_path: str
+  ssh_key_path: str
+init: false
