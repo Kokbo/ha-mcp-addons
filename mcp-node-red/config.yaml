@@ -1,0 +1,23 @@
+name: MCP Node-RED Server
+version: "1.0.0"
+slug: mcp-node-red
+description: MCP server for Node-RED flow management via Streamable HTTP
+url: https://github.com/Kokbo/ha-mcp-addons
+arch:
+  - aarch64
+host_network: true
+ports:
+  3003/tcp: 3003
+ports_description:
+  3003/tcp: MCP Streamable HTTP server
+options:
+  port: 3003
+  node_red_url: "http://localhost:1880"
+  node_red_user: ""
+  node_red_password: ""
+schema:
+  port: int
+  node_red_url: str
+  node_red_user: str
+  node_red_password: str
+init: false

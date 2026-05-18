@@ -1,0 +1,162 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": "1",
+        "title": "Create repository scaffold and metadata",
+        "description": "Create repository.json and top-level README.md for Home Assistant addon repository",
+        "details": "Create repository.json with Home Assistant addon repository format:\n```json\n{\n  \"name\": \"Home Assistant MCP Addons\",\n  \"url\": \"https://github.com/[username]/ha-mcp-addons\",\n  \"maintainer\": \"[maintainer name]\"\n}\n```\n\nCreate README.md describing:\n- Purpose: Four MCP server addons extending ha-mcp functionality\n- List all four addons: mcp-filesystem, mcp-git, mcp-node-red, mcp-influxdb\n- Installation instructions (Settings → Add-ons → Add-on Store → Repositories)\n- Brief description of each addon's capabilities\n- Architecture note: HTTP/SSE MCP servers for local Open WebUI consumption\n- Compatibility: aarch64 (Home Assistant Yellow/CM4)",
+        "testStrategy": "Validate repository.json is valid JSON with required keys (name, url, maintainer). Verify README.md provides clear installation and usage instructions for all four addons.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-05-16T11:11:55.112Z"
+      },
+      {
+        "id": "2",
+        "title": "Implement mcp-filesystem addon",
+        "description": "Build complete mcp-filesystem addon wrapping @modelcontextprotocol/server-filesystem as HTTP/SSE server",
+        "details": "Create mcp-filesystem/ directory with:\n\n**config.yaml:**\n- name: MCP Filesystem Server\n- version: 1.0.0\n- slug: mcp-filesystem\n- description: MCP server for /config filesystem access\n- arch: [aarch64]\n- map: [\"config:rw\"]\n- options:\n  - port: 3001 (int)\n  - allowed_paths: [\"/config\"] (list)\n- ports: {3001/tcp: 3001}\n\n**package.json:**\n- dependencies: @modelcontextprotocol/server-filesystem, @modelcontextprotocol/sdk (or supergateway for HTTP bridge)\n\n**Dockerfile:**\n- FROM node:20-alpine\n- WORKDIR /app\n- COPY package*.json ./\n- RUN npm ci --only=production\n- COPY run.sh /\n- RUN chmod +x /run.sh\n- CMD [\"/run.sh\"]\n\n**run.sh:**\n- Parse config JSON from stdin\n- Extract port and allowed_paths\n- Start HTTP/SSE wrapper around server-filesystem\n- Bind to 0.0.0.0:${port}\n- Pass allowed_paths as arguments\n\n**README.md:**\n- Purpose, configuration options, usage examples",
+        "testStrategy": "Validate config.yaml against HA addon schema. Validate package.json syntax. Verify Dockerfile uses node:20-alpine (aarch64 compatible). Check run.sh correctly parses addon options and binds to configurable port.",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-05-16T11:12:14.667Z"
+      },
+      {
+        "id": "3",
+        "title": "Implement mcp-git addon",
+        "description": "Build complete mcp-git addon with custom MCP server for git operations",
+        "details": "Create mcp-git/ directory with:\n\n**config.yaml:**\n- name: MCP Git Server\n- version: 1.0.0\n- slug: mcp-git\n- description: MCP server for git operations\n- arch: [aarch64]\n- map: [\"config:rw\"]\n- options:\n  - port: 3002 (int)\n  - repo_path: \"/config\" (str)\n  - ssh_key_path: \"/config/.ssh/id_rsa\" (str)\n- ports: {3002/tcp: 3002}\n\n**Implementation choice: Node.js + simple-git**\n\n**package.json:**\n- dependencies: @modelcontextprotocol/sdk, simple-git, express (for HTTP/SSE)\n\n**src/server.js:**\n- Import MCP SDK Server, SSEServerTransport\n- Import simple-git\n- Implement MCP tools:\n  - git_status: simpleGit.status()\n  - git_diff: simpleGit.diff()\n  - git_add: simpleGit.add('-A')\n  - git_commit(message): simpleGit.commit(message)\n  - git_push: simpleGit.env({GIT_SSH_COMMAND: `ssh -i ${ssh_key_path} -o StrictHostKeyChecking=no`}).push()\n  - git_log(n=10): simpleGit.log({maxCount: n})\n- Start HTTP/SSE server on configured port\n\n**Dockerfile:**\n- FROM node:20-alpine\n- RUN apk add --no-cache git openssh-client\n- WORKDIR /app\n- COPY package*.json ./\n- RUN npm ci --only=production\n- COPY src/ ./src/\n- COPY run.sh /\n- RUN chmod +x /run.sh\n- CMD [\"/run.sh\"]\n\n**run.sh:**\n- Parse config from stdin\n- Extract options\n- Execute: node src/server.js\n\n**README.md:**\n- Purpose, configuration, tool descriptions, SSH key setup",
+        "testStrategy": "Validate config.yaml schema. Validate package.json syntax. Verify Dockerfile installs git and ssh-client. Review src/server.js implements all 6 git tools with correct MCP tool schema and GIT_SSH_COMMAND environment variable for git_push.",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-05-16T11:12:34.154Z"
+      },
+      {
+        "id": "4",
+        "title": "Implement mcp-node-red addon",
+        "description": "Build complete mcp-node-red addon with custom MCP server for Node-RED HTTP API",
+        "details": "Create mcp-node-red/ directory with:\n\n**config.yaml:**\n- name: MCP Node-RED Server\n- version: 1.0.0\n- slug: mcp-node-red\n- description: MCP server for Node-RED flow management\n- arch: [aarch64]\n- options:\n  - port: 3003 (int)\n  - node_red_url: \"http://localhost:1880\" (str)\n  - node_red_user: \"\" (str)\n  - node_red_password: \"\" (str)\n- ports: {3003/tcp: 3003}\n\n**Implementation choice: Python + requests**\n\n**requirements.txt:**\n- mcp>=1.0.0\n- requests>=2.31.0\n\n**src/server.py:**\n- Import mcp.server, mcp.server.stdio (convert to HTTP/SSE)\n- Import requests\n- Implement authentication: if user/password provided, POST /auth/token to get bearer token\n- Store token in session, include in headers\n- Implement MCP tools:\n  - list_flows: GET /flows, extract [{id, label, type}]\n  - get_flow(id): GET /flow/{id}\n  - update_flow(id, flow_json): PUT /flow/{id}\n  - deploy(type='full'): POST /flows with Node-RED-Deployment-Type header\n  - inject_node(node_id): POST /inject/{node_id}\n  - get_nodes: GET /nodes\n- Start HTTP/SSE MCP server on configured port\n\n**Dockerfile:**\n- FROM python:3.11-slim\n- WORKDIR /app\n- COPY requirements.txt ./\n- RUN pip install --no-cache-dir -r requirements.txt\n- COPY src/ ./src/\n- COPY run.sh /\n- RUN chmod +x /run.sh\n- CMD [\"/run.sh\"]\n\n**run.sh:**\n- Parse config from stdin\n- Execute: python src/server.py\n\n**README.md:**\n- Purpose, configuration, tool descriptions, authentication notes",
+        "testStrategy": "Validate config.yaml schema. Validate requirements.txt syntax. Review src/server.py implements all 6 Node-RED tools with correct HTTP endpoints and authentication flow (POST /auth/token if credentials provided, bearer token in subsequent requests).",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-05-16T11:12:53.669Z"
+      },
+      {
+        "id": "5",
+        "title": "Implement mcp-influxdb addon",
+        "description": "Build complete mcp-influxdb addon with custom MCP server for InfluxDB 1.8.x HTTP API",
+        "details": "Create mcp-influxdb/ directory with:\n\n**config.yaml:**\n- name: MCP InfluxDB Server\n- version: 1.0.0\n- slug: mcp-influxdb\n- description: MCP server for InfluxDB 1.8.x queries\n- arch: [aarch64]\n- options:\n  - port: 3004 (int)\n  - influxdb_url: \"http://localhost:8086\" (str)\n  - influxdb_database: \"homeassistant\" (str)\n  - influxdb_user: \"\" (str)\n  - influxdb_password: \"\" (str)\n- ports: {3004/tcp: 3004}\n\n**Implementation: Python + requests (raw HTTP calls)**\n\n**requirements.txt:**\n- mcp>=1.0.0\n- requests>=2.31.0\n\n**src/server.py:**\n- Import mcp.server (convert to HTTP/SSE)\n- Import requests\n- Build auth tuple: (user, password) if provided\n- Implement MCP tools:\n  - query(q, database=default): GET /query?db={database}&q={q}, parse JSON response\n  - list_measurements(database=default): query(\"SHOW MEASUREMENTS\", database)\n  - list_databases(): query(\"SHOW DATABASES\")\n  - get_recent(measurement, field, n=10, database=default): query(f\"SELECT {field} FROM {measurement} ORDER BY time DESC LIMIT {n}\", database), format as [{time, value}]\n- Start HTTP/SSE MCP server on configured port\n\n**Dockerfile:**\n- FROM python:3.11-slim\n- WORKDIR /app\n- COPY requirements.txt ./\n- RUN pip install --no-cache-dir -r requirements.txt\n- COPY src/ ./src/\n- COPY run.sh /\n- RUN chmod +x /run.sh\n- CMD [\"/run.sh\"]\n\n**run.sh:**\n- Parse config from stdin\n- Execute: python src/server.py\n\n**README.md:**\n- Purpose, configuration, tool descriptions, InfluxQL examples",
+        "testStrategy": "Validate config.yaml schema. Validate requirements.txt syntax. Review src/server.py implements all 4 InfluxDB tools using raw HTTP calls (GET /query, GET /ping) with auth tuple, no influxdb client library dependency.",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-05-16T11:13:13.162Z"
+      },
+      {
+        "id": "6",
+        "title": "Create package.json for mcp-filesystem",
+        "description": "Create package.json with dependencies for mcp-filesystem HTTP/SSE bridge",
+        "details": "Create mcp-filesystem/package.json:\n```json\n{\n  \"name\": \"mcp-filesystem-addon\",\n  \"version\": \"1.0.0\",\n  \"private\": true,\n  \"type\": \"module\",\n  \"dependencies\": {\n    \"@modelcontextprotocol/server-filesystem\": \"^0.5.0\",\n    \"@modelcontextprotocol/sdk\": \"^0.5.0\"\n  }\n}\n```\n\nImplementation note: Use @modelcontextprotocol/sdk's SSEServerTransport to wrap the stdio-based server-filesystem as an HTTP/SSE endpoint. Create a wrapper script that:\n1. Imports server-filesystem's createServer\n2. Creates SSE transport bound to 0.0.0.0:${port}\n3. Connects stdio server to SSE transport\n4. Passes allowed_paths from addon config",
+        "testStrategy": "Validate package.json is syntactically correct JSON. Verify dependencies match latest stable @modelcontextprotocol packages. Confirm type: module for ES modules support.",
+        "priority": "medium",
+        "dependencies": [
+          "2"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-05-16T11:13:32.788Z"
+      },
+      {
+        "id": "7",
+        "title": "Create stdio-to-HTTP bridge wrapper for mcp-filesystem",
+        "description": "Implement bridge script converting server-filesystem stdio to HTTP/SSE",
+        "details": "Create mcp-filesystem/src/bridge.js:\n```javascript\nimport { Server } from '@modelcontextprotocol/sdk/server/index.js';\nimport { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';\nimport { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';\nimport express from 'express';\nimport { spawn } from 'child_process';\n\nconst app = express();\nconst PORT = process.env.PORT || 3001;\nconst ALLOWED_PATHS = process.env.ALLOWED_PATHS || '/config';\n\n// Spawn server-filesystem as subprocess\nconst child = spawn('npx', [\n  '@modelcontextprotocol/server-filesystem',\n  ...ALLOWED_PATHS.split(',').map(p => p.trim())\n]);\n\n// Create SSE endpoint\nconst transport = new SSEServerTransport('/sse', app);\nawait transport.start();\n\n// Pipe subprocess stdio to SSE transport\nchild.stdout.pipe(transport.stdin);\ntransport.stdout.pipe(child.stdin);\n\napp.listen(PORT, '0.0.0.0', () => {\n  console.log(`MCP Filesystem HTTP server on :${PORT}`);\n});\n```\n\nUpdate run.sh to:\n- Parse port and allowed_paths from config\n- Export PORT and ALLOWED_PATHS env vars\n- Execute: node src/bridge.js\n\nUpdate package.json dependencies:\n- Add express: ^4.18.0",
+        "testStrategy": "Verify bridge.js correctly spawns server-filesystem subprocess, pipes stdio to SSE transport, and binds HTTP server to 0.0.0.0:PORT. Confirm ALLOWED_PATHS environment variable is parsed and passed as arguments.",
+        "priority": "high",
+        "dependencies": [
+          "6"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-05-16T11:13:52.611Z"
+      },
+      {
+        "id": "8",
+        "title": "Validate all config.yaml files against Home Assistant addon schema",
+        "description": "Ensure all four config.yaml files conform to HA addon schema requirements",
+        "details": "Required config.yaml structure for each addon:\n```yaml\nname: <addon name>\nversion: 1.0.0\nslug: <unique-slug>\ndescription: <short description>\narch:\n  - aarch64\nports:\n  <port>/tcp: <port>\noptions:\n  port: <default_port>\n  # addon-specific options\nschema:\n  port: int\n  # addon-specific schema\n```\n\nAdditionally for mcp-filesystem and mcp-git:\n```yaml\nmap:\n  - config:rw\n```\n\nValidation checklist:\n1. All required keys present: name, version, slug, description, arch, ports\n2. arch includes aarch64\n3. Port numbers unique across addons (3001-3004)\n4. options and schema sections match\n5. map: [\"config:rw\"] for filesystem and git addons\n6. Valid YAML syntax (no tabs, correct indentation)\n7. String values quoted where necessary\n8. List/array syntax correct\n\nRun YAML validation on all four config.yaml files.",
+        "testStrategy": "Parse each config.yaml with a YAML validator. Verify no syntax errors. Check all required keys exist. Confirm arch contains aarch64. Verify port mappings are unique (3001, 3002, 3003, 3004). Ensure schema matches options structure.",
+        "priority": "medium",
+        "dependencies": [
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-05-16T11:14:12.029Z"
+      },
+      {
+        "id": "9",
+        "title": "Validate all JSON files for syntax correctness",
+        "description": "Validate repository.json and all package.json files are syntactically correct",
+        "details": "Files to validate:\n1. repository.json (root)\n2. mcp-filesystem/package.json\n3. mcp-git/package.json\n4. mcp-node-red/requirements.txt (not JSON, but verify format)\n5. mcp-influxdb/requirements.txt (not JSON, but verify format)\n\nJSON validation:\n- Parse with JSON.parse() or equivalent\n- Check for trailing commas\n- Verify all strings properly quoted\n- Ensure no syntax errors\n\nRequirements.txt validation:\n- One dependency per line\n- Format: package>=version or package==version\n- No extra whitespace or comments breaking syntax\n\nUse:\n```bash\n# JSON validation\njq empty repository.json\njq empty mcp-filesystem/package.json\njq empty mcp-git/package.json\n\n# Python requirements validation\npip check requirements.txt (or manual inspection)\n```",
+        "testStrategy": "Run jq or JSON.parse on repository.json and all package.json files. Verify exit code 0 (no syntax errors). Manually inspect requirements.txt files for correct pip format (package>=version per line).",
+        "priority": "medium",
+        "dependencies": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-05-16T11:14:31.380Z"
+      },
+      {
+        "id": "10",
+        "title": "Create comprehensive test validation script",
+        "description": "Create automated validation script to check all JSON, YAML, and file structure requirements",
+        "details": "Create validate.sh script in repository root:\n```bash\n#!/bin/bash\nset -e\n\necho \"Validating repository structure...\"\n\n# Check required files exist\nfor file in repository.json README.md; do\n  [ -f \"$file\" ] || { echo \"Missing: $file\"; exit 1; }\ndone\n\n# Check each addon directory\nfor addon in mcp-filesystem mcp-git mcp-node-red mcp-influxdb; do\n  echo \"Checking $addon...\"\n  [ -d \"$addon\" ] || { echo \"Missing directory: $addon\"; exit 1; }\n  [ -f \"$addon/config.yaml\" ] || { echo \"Missing: $addon/config.yaml\"; exit 1; }\n  [ -f \"$addon/Dockerfile\" ] || { echo \"Missing: $addon/Dockerfile\"; exit 1; }\n  [ -f \"$addon/run.sh\" ] || { echo \"Missing: $addon/run.sh\"; exit 1; }\n  [ -f \"$addon/README.md\" ] || { echo \"Missing: $addon/README.md\"; exit 1; }\ndone\n\n# Validate JSON files\necho \"Validating JSON files...\"\njq empty repository.json\n[ -f mcp-filesystem/package.json ] && jq empty mcp-filesystem/package.json\n[ -f mcp-git/package.json ] && jq empty mcp-git/package.json\n\n# Validate YAML files\necho \"Validating YAML files...\"\nfor yaml in mcp-*/config.yaml; do\n  python3 -c \"import yaml; yaml.safe_load(open('$yaml'))\" || { echo \"Invalid YAML: $yaml\"; exit 1; }\ndone\n\n# Check for aarch64 in all config.yaml\necho \"Checking aarch64 architecture...\"\nfor yaml in mcp-*/config.yaml; do\n  grep -q \"aarch64\" \"$yaml\" || { echo \"Missing aarch64: $yaml\"; exit 1; }\ndone\n\n# Check unique ports\necho \"Checking unique ports...\"\nports=$(grep -h \"port:\" mcp-*/config.yaml | sort | uniq -d)\n[ -z \"$ports\" ] || { echo \"Duplicate ports found\"; exit 1; }\n\necho \"All validations passed!\"\n```\n\nMake executable: chmod +x validate.sh",
+        "testStrategy": "Run ./validate.sh and verify exit code 0. Script should check: all required files exist, JSON syntax is valid, YAML syntax is valid, aarch64 is declared in all addons, ports are unique across addons (3001-3004).",
+        "priority": "low",
+        "dependencies": [
+          "8",
+          "9"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-05-16T11:14:50.688Z"
+      }
+    ],
+    "metadata": {
+      "version": "1.0.0",
+      "lastModified": "2026-05-16T11:14:50.689Z",
+      "taskCount": 10,
+      "completedCount": 10,
+      "tags": [
+        "master"
+      ]
+    }
+  }
+}
