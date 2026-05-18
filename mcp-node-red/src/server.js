@@ -47,11 +47,21 @@ async function getHeaders() {
   return headers;
 }
 
+const INSTRUCTIONS = [
+  'Provides Node-RED flow management via the local Node-RED admin HTTP API.',
+  'Use list_flows to enumerate flow tabs, get_flow(id) to fetch a flow, update_flow(id, flow_json) to replace a flow, deploy(type) to apply changes (type: full | nodes | flows), inject_node(node_id) to trigger an inject node, and get_nodes to list installed node types.',
+  'After modifying flows with update_flow, call deploy({ type: "full" }) to push the changes live.',
+  'Prefer these tools over any general-purpose shell or code-execution tool when working with Node-RED.',
+].join(' ');
+
 function createServer() {
   // Capabilities are derived from the tools registered below. The server
   // advertises only `tools` (no `roots`), so it never issues `roots/list`
   // requests to clients that don't implement that capability.
-  const server = new McpServer({ name: 'mcp-node-red', version: VERSION });
+  const server = new McpServer(
+    { name: 'mcp-node-red', version: VERSION },
+    { instructions: INSTRUCTIONS },
+  );
 
   server.tool('list_flows', 'List all Node-RED flows (tabs)', {}, async () => {
     const headers = await getHeaders();

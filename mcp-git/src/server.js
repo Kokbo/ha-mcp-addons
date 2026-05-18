@@ -20,11 +20,20 @@ const SSH_KEY_PATH = config.ssh_key_path ?? '/config/.ssh/id_rsa';
 
 const git = simpleGit(REPO_PATH);
 
+const INSTRUCTIONS = [
+  'Provides git operations against the Home Assistant /config repository.',
+  'Use git_status to inspect the working tree, git_diff to view unstaged changes, git_add to stage all changes, git_commit(message) to commit, git_push to push to the remote (uses the configured SSH key), and git_log(n) to view recent history.',
+  'Prefer these tools over any general-purpose shell or code-execution tool when performing git operations on the HA config repository.',
+].join(' ');
+
 function createServer() {
   // Capabilities are derived from the tools registered below. Notably the
   // server advertises only `tools` (no `roots`), so it never issues
   // `roots/list` requests to clients that don't implement that capability.
-  const server = new McpServer({ name: 'mcp-git', version: VERSION });
+  const server = new McpServer(
+    { name: 'mcp-git', version: VERSION },
+    { instructions: INSTRUCTIONS },
+  );
 
   server.tool('git_status', 'Show working tree status', {}, async () => {
     const status = await git.status();
