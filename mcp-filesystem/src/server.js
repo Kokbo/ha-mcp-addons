@@ -97,12 +97,19 @@ async function createSession(req, res) {
     },
   });
 
-  transport.onclose = () => {
+  let closing = false;
+  transport.onclose = async () => {
+    if (closing) return;
+    closing = true;
     const sessionId = transport.sessionId;
     if (sessionId) {
       sessions.delete(sessionId);
     }
-    void server.close().catch(error => console.error('Error closing MCP server:', error));
+    try {
+      await server.close();
+    } catch (e) {
+      // ignore
+    }
   };
 
   await server.connect(transport);
