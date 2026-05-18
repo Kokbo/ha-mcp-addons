@@ -5,6 +5,12 @@ import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import express from 'express';
 import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PKG = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf8'));
+const VERSION = PKG.version;
 
 const config = JSON.parse(readFileSync('/data/options.json', 'utf8'));
 const PORT = config.port ?? 3003;
@@ -45,7 +51,7 @@ function createServer() {
   // Capabilities are derived from the tools registered below. The server
   // advertises only `tools` (no `roots`), so it never issues `roots/list`
   // requests to clients that don't implement that capability.
-  const server = new McpServer({ name: 'mcp-node-red', version: '1.0.5' });
+  const server = new McpServer({ name: 'mcp-node-red', version: VERSION });
 
   server.tool('list_flows', 'List all Node-RED flows (tabs)', {}, async () => {
     const headers = await getHeaders();
@@ -145,12 +151,19 @@ async function createSession(req, res) {
     },
   });
 
-  transport.onclose = () => {
+  let closing = false;
+  transport.onclose = async () => {
+    if (closing) return;
+    closing = true;
     const sessionId = transport.sessionId;
     if (sessionId) {
       sessions.delete(sessionId);
     }
-    void server.close().catch(error => console.error('Error closing MCP server:', error));
+    try {
+      await server.close();
+    } catch (e) {
+      // ignore
+    }
   };
 
   await server.connect(transport);
