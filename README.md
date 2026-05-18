@@ -31,6 +31,21 @@ http://localhost:3003/mcp   # mcp-node-red
 http://localhost:3004/mcp   # mcp-influxdb
 ```
 
+### Open WebUI setup (read this before you spend an afternoon debugging)
+
+In Open WebUI → **Settings → Tools → Add Tool Server**, configure each addon as follows. The defaults are subtly wrong in ways that look like they work but silently break:
+
+| Field | Value | Why |
+|-------|-------|-----|
+| **Type** | `MCP (Streamable HTTP)` | These addons speak the MCP Streamable HTTP transport, **not** OpenAPI / not the legacy MCP SSE transport. |
+| **URL** | `http://localhost:<port>/mcp` (e.g. `http://localhost:3001/mcp`) | All four addons use `host_network: true`, so they're reachable on the host's `localhost`. The `/mcp` suffix is required. |
+| **Auth** | `None` | **Important.** Do not pick `Bearer` and leave the key blank — Open WebUI sends `Authorization: Bearer ` (empty token) to the addon. The MCP `Verify Connection` button still succeeds in that state, but actual `tools/call` requests silently fail. This is a known Open WebUI bug (see [discussion #19821](https://github.com/open-webui/open-webui/discussions/19821) / [issue #19813](https://github.com/open-webui/open-webui/issues/19813)). Always pick `None` unless you're actually putting a token in. |
+| **Function Name Filter List** | a single comma `,` (or any non-empty value) | Open WebUI treats an empty filter list as "expose nothing", not "expose everything". A bare `,` is enough to satisfy the parser and expose all tools. Without it the tool server shows as connected but no functions appear to the LLM. |
+
+#### Filesystem paths
+
+`mcp-filesystem` mounts the Home Assistant config directory at **`/config` inside the container**. When you prompt the model, refer to files as `/config/configuration.yaml`, **not** `/homeassistant/configuration.yaml`. The host path (`/homeassistant`, `/usr/share/hassio/homeassistant`, etc.) is invisible to the addon — only the in-container `/config` view exists.
+
 ## Architecture
 
 These addons fill the gaps left by `ha-mcp`:
