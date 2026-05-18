@@ -1,10 +1,11 @@
 name: MCP InfluxDB Server
-version: "1.0.1"
+version: "1.0.2"
 slug: mcp-influxdb
 description: MCP server for InfluxDB 1.8.x queries via HTTP/SSE
 url: https://github.com/Kokbo/ha-mcp-addons
 arch:
   - aarch64
+host_network: true
 ports:
   3004/tcp: 3004
 ports_description:

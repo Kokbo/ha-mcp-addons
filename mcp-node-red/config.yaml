@@ -1,10 +1,11 @@
 name: MCP Node-RED Server
-version: "1.0.1"
+version: "1.0.2"
 slug: mcp-node-red
 description: MCP server for Node-RED flow management via HTTP/SSE
 url: https://github.com/Kokbo/ha-mcp-addons
 arch:
   - aarch64
+host_network: true
 ports:
   3003/tcp: 3003
 ports_description:
