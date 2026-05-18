@@ -1,10 +1,11 @@
 name: MCP Git Server
-version: "1.0.1"
+version: "1.0.2"
 slug: mcp-git
 description: MCP server exposing git operations on /config via HTTP/SSE
 url: https://github.com/Kokbo/ha-mcp-addons
 arch:
   - aarch64
+host_network: true
 ports:
   3002/tcp: 3002
 ports_description:
