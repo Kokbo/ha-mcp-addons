@@ -1,24 +1,38 @@
+"""MCP InfluxDB server — native MCP Streamable HTTP transport.
+
+Uses the official Python `mcp` SDK's FastMCP API and exposes its
+`streamable_http_app()` ASGI application directly on `/mcp` via uvicorn.
+No supergateway, no stdio bridge.
+
+The server advertises only the `tools` capability and never issues
+`roots/list` requests to the client.
+"""
+
 import json
 import os
-import sys
 
 import requests
 import uvicorn
 from mcp.server.fastmcp import FastMCP
 
-with open('/data/options.json') as f:
+with open("/data/options.json") as f:
     config = json.load(f)
 
-PORT = config.get('port', 3004)
-INFLUXDB_URL = config.get('influxdb_url', 'http://localhost:8086').rstrip('/')
-DEFAULT_DATABASE = config.get('influxdb_database', 'homeassistant')
-INFLUXDB_USER = config.get('influxdb_user', '')
-INFLUXDB_PASSWORD = config.get('influxdb_password', '')
+PORT = config.get("port", 3004)
+INFLUXDB_URL = config.get("influxdb_url", "http://localhost:8086").rstrip("/")
+DEFAULT_DATABASE = config.get("influxdb_database", "homeassistant")
+INFLUXDB_USER = config.get("influxdb_user", "")
+INFLUXDB_PASSWORD = config.get("influxdb_password", "")
 
 AUTH = (INFLUXDB_USER, INFLUXDB_PASSWORD) if INFLUXDB_USER else None
-STATEFUL = os.environ.get("MCP_STATEFUL") == "true" or "--stateful" in sys.argv
 
-mcp = FastMCP("mcp-influxdb", stateless_http=not STATEFUL)
+mcp = FastMCP(
+    "mcp-influxdb",
+    host="0.0.0.0",
+    port=PORT,
+    streamable_http_path="/mcp",
+    stateless_http=False,
+)
 
 
 def influx_query(q: str, database: str) -> dict:

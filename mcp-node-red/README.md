@@ -4,7 +4,7 @@ Home Assistant addon for managing Node-RED flows via a Streamable HTTP MCP serve
 
 ## What it does
 
-Custom MCP server that calls the Node-RED admin HTTP API and exposes flow management as MCP tools.
+Custom MCP server that calls the Node-RED admin HTTP API and exposes flow management as MCP tools, served over **MCP Streamable HTTP** directly — no `supergateway`, no stdio bridge. The server uses `@modelcontextprotocol/sdk`'s native `StreamableHTTPServerTransport` mounted on an Express HTTP server at `/mcp`. It only advertises the `tools` server capability, so it never issues `roots/list` requests to the client.
 
 **Available MCP tools:**
 

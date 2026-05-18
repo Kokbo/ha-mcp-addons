@@ -1,59 +1,72 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  isInitializeRequest,
+} from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'crypto';
-import { z } from 'zod';
-import express from 'express';
-import { simpleGit } from 'simple-git';
 import { readFileSync } from 'fs';
+import express from 'express';
 
 const config = JSON.parse(readFileSync('/data/options.json', 'utf8'));
-const PORT = config.port ?? 3002;
-const REPO_PATH = config.repo_path ?? '/config';
-const SSH_KEY_PATH = config.ssh_key_path ?? '/config/.ssh/id_rsa';
+const PORT = config.port ?? 3001;
+const ALLOWED_PATHS = Array.isArray(config.allowed_paths) && config.allowed_paths.length > 0
+  ? config.allowed_paths
+  : ['/config'];
 
-const git = simpleGit(REPO_PATH);
+const UPSTREAM_BIN = '/app/node_modules/.bin/mcp-server-filesystem';
 
-function createServer() {
-  // Capabilities are derived from the tools registered below. Notably the
-  // server advertises only `tools` (no `roots`), so it never issues
-  // `roots/list` requests to clients that don't implement that capability.
-  const server = new McpServer({ name: 'mcp-git', version: '1.0.5' });
+// Connect to the official stdio-based filesystem server as a subprocess.
+// We declare an empty client capability set so the upstream server falls back
+// to its CLI-provided allowed directories and never issues a `roots/list`
+// request back to us.
+const upstream = new Client(
+  { name: 'mcp-filesystem-proxy', version: '1.0.7' },
+  { capabilities: {} },
+);
+const upstreamTransport = new StdioClientTransport({
+  command: UPSTREAM_BIN,
+  args: ALLOWED_PATHS,
+  stderr: 'inherit',
+});
 
-  server.tool('git_status', 'Show working tree status', {}, async () => {
-    const status = await git.status();
-    return { content: [{ type: 'text', text: JSON.stringify(status, null, 2) }] };
-  });
+await upstream.connect(upstreamTransport);
 
-  server.tool('git_diff', 'Show unstaged changes', {}, async () => {
-    const diff = await git.diff();
-    return { content: [{ type: 'text', text: diff || '(no unstaged changes)' }] };
-  });
+let cachedTools = await upstream.listTools();
 
-  server.tool('git_add', 'Stage all changes (git add -A)', {}, async () => {
-    await git.add('-A');
-    return { content: [{ type: 'text', text: 'All changes staged' }] };
-  });
+upstream.fallbackNotificationHandler = async notification => {
+  if (notification?.method === 'notifications/tools/list_changed') {
+    try {
+      cachedTools = await upstream.listTools();
+      for (const { server } of sessions.values()) {
+        try {
+          await server.sendToolListChanged();
+        } catch (error) {
+          console.error('Error broadcasting tool list change:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh upstream tool list:', error);
+    }
+  }
+};
 
-  server.tool('git_commit', 'Commit staged changes with a message', {
-    message: z.string().describe('Commit message'),
-  }, async ({ message }) => {
-    const result = await git.commit(message);
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
-  });
+function createProxyServer() {
+  const server = new Server(
+    { name: 'mcp-filesystem', version: '1.0.7' },
+    { capabilities: { tools: { listChanged: true } } },
+  );
 
-  server.tool('git_push', 'Push to remote using configured SSH key', {}, async () => {
-    const result = await git
-      .env({ GIT_SSH_COMMAND: `ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no` })
-      .push();
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
-  });
+  server.setRequestHandler(ListToolsRequestSchema, async () => cachedTools);
 
-  server.tool('git_log', 'Show recent commits', {
-    n: z.number().int().positive().default(10).describe('Number of commits to show'),
-  }, async ({ n }) => {
-    const log = await git.log({ maxCount: n });
-    return { content: [{ type: 'text', text: JSON.stringify(log, null, 2) }] };
+  server.setRequestHandler(CallToolRequestSchema, async req => {
+    return upstream.callTool({
+      name: req.params.name,
+      arguments: req.params.arguments,
+    });
   });
 
   return server;
@@ -76,7 +89,7 @@ function sendJsonRpcError(res, status, code, message) {
 }
 
 async function createSession(req, res) {
-  const server = createServer();
+  const server = createProxyServer();
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
     onsessioninitialized: sessionId => {
@@ -164,7 +177,16 @@ app.delete('/mcp', async (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`MCP Git Streamable HTTP server listening on port ${PORT}`);
+  console.log(`MCP Filesystem Streamable HTTP server listening on port ${PORT}`);
   console.log(`Endpoint: /mcp`);
-  console.log(`Repo: ${REPO_PATH}, SSH key: ${SSH_KEY_PATH}`);
+  console.log(`Allowed paths: ${ALLOWED_PATHS.join(', ')}`);
+  console.log(`Upstream tools: ${cachedTools.tools.map(t => t.name).join(', ')}`);
 });
+
+function shutdown(signal) {
+  console.log(`Received ${signal}, shutting down`);
+  upstream.close().catch(() => {});
+  process.exit(0);
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

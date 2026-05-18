@@ -11,7 +11,6 @@ const PORT = config.port ?? 3003;
 const NODE_RED_URL = (config.node_red_url ?? 'http://localhost:1880').replace(/\/$/, '');
 const NODE_RED_USER = config.node_red_user ?? '';
 const NODE_RED_PASSWORD = config.node_red_password ?? '';
-const STATEFUL = process.env.MCP_STATEFUL === 'true' || process.argv.includes('--stateful');
 
 let authToken = null;
 
@@ -43,7 +42,10 @@ async function getHeaders() {
 }
 
 function createServer() {
-  const server = new McpServer({ name: 'mcp-node-red', version: '1.0.0' });
+  // Capabilities are derived from the tools registered below. The server
+  // advertises only `tools` (no `roots`), so it never issues `roots/list`
+  // requests to clients that don't implement that capability.
+  const server = new McpServer({ name: 'mcp-node-red', version: '1.0.5' });
 
   server.tool('list_flows', 'List all Node-RED flows (tabs)', {}, async () => {
     const headers = await getHeaders();
@@ -129,15 +131,12 @@ function getSessionId(req) {
 function sendJsonRpcError(res, status, code, message) {
   res.status(status).json({
     jsonrpc: '2.0',
-    error: {
-      code,
-      message,
-    },
+    error: { code, message },
     id: null,
   });
 }
 
-async function createStatefulSession(req, res) {
+async function createSession(req, res) {
   const server = createServer();
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: () => randomUUID(),
@@ -158,7 +157,7 @@ async function createStatefulSession(req, res) {
   await transport.handleRequest(req, res, req.body);
 }
 
-async function handleStatefulPost(req, res) {
+async function handlePost(req, res) {
   const sessionId = getSessionId(req);
   const session = sessionId ? sessions.get(sessionId) : undefined;
 
@@ -177,10 +176,10 @@ async function handleStatefulPost(req, res) {
     return;
   }
 
-  await createStatefulSession(req, res);
+  await createSession(req, res);
 }
 
-async function handleStatefulSessionRequest(req, res) {
+async function handleSessionRequest(req, res) {
   const sessionId = getSessionId(req);
   const session = sessionId ? sessions.get(sessionId) : undefined;
 
@@ -194,23 +193,7 @@ async function handleStatefulSessionRequest(req, res) {
 
 app.post('/mcp', express.json(), async (req, res) => {
   try {
-    if (STATEFUL) {
-      await handleStatefulPost(req, res);
-      return;
-    }
-
-    const server = createServer();
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-    });
-
-    res.on('close', () => {
-      void transport.close().catch(error => console.error('Error closing MCP transport:', error));
-      void server.close().catch(error => console.error('Error closing MCP server:', error));
-    });
-
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
+    await handlePost(req, res);
   } catch (error) {
     console.error('Error handling MCP request:', error);
     if (!res.headersSent) {
@@ -220,40 +203,29 @@ app.post('/mcp', express.json(), async (req, res) => {
 });
 
 app.get('/mcp', async (req, res) => {
-  if (STATEFUL) {
-    try {
-      await handleStatefulSessionRequest(req, res);
-    } catch (error) {
-      console.error('Error handling MCP session request:', error);
-      if (!res.headersSent) {
-        sendJsonRpcError(res, 500, -32603, 'Internal server error');
-      }
+  try {
+    await handleSessionRequest(req, res);
+  } catch (error) {
+    console.error('Error handling MCP session request:', error);
+    if (!res.headersSent) {
+      sendJsonRpcError(res, 500, -32603, 'Internal server error');
     }
-    return;
   }
-
-  sendJsonRpcError(res, 405, -32000, 'Method not allowed');
 });
 
 app.delete('/mcp', async (req, res) => {
-  if (STATEFUL) {
-    try {
-      await handleStatefulSessionRequest(req, res);
-    } catch (error) {
-      console.error('Error handling MCP session request:', error);
-      if (!res.headersSent) {
-        sendJsonRpcError(res, 500, -32603, 'Internal server error');
-      }
+  try {
+    await handleSessionRequest(req, res);
+  } catch (error) {
+    console.error('Error handling MCP session request:', error);
+    if (!res.headersSent) {
+      sendJsonRpcError(res, 500, -32603, 'Internal server error');
     }
-    return;
   }
-
-  sendJsonRpcError(res, 405, -32000, 'Method not allowed');
 });
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`MCP Node-RED Streamable HTTP server listening on port ${PORT}`);
   console.log(`Endpoint: /mcp`);
-  console.log(`Stateful: ${STATEFUL}`);
   console.log(`Node-RED URL: ${NODE_RED_URL}`);
 });
