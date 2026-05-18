@@ -16,7 +16,7 @@ INFLUXDB_PASSWORD = config.get('influxdb_password', '')
 
 AUTH = (INFLUXDB_USER, INFLUXDB_PASSWORD) if INFLUXDB_USER else None
 
-mcp = FastMCP("mcp-influxdb")
+mcp = FastMCP("mcp-influxdb", stateless_http=True)
 
 
 def influx_query(q: str, database: str) -> dict:
@@ -78,5 +78,5 @@ def get_recent(
 
 
 if __name__ == "__main__":
-    app = mcp.sse_app()
+    app = mcp.streamable_http_app()
     uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="info")

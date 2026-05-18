@@ -1,10 +1,10 @@
 # MCP Filesystem Server
 
-Home Assistant addon exposing read/write access to `/config` via an HTTP/SSE MCP server.
+Home Assistant addon exposing read/write access to `/config` via a Streamable HTTP MCP server.
 
 ## What it does
 
-Wraps the official `@modelcontextprotocol/server-filesystem` package and bridges it from stdio to HTTP/SSE using `supergateway`, so Open WebUI can connect to it directly.
+Wraps the official `@modelcontextprotocol/server-filesystem` package and bridges it from stdio to Streamable HTTP using `supergateway`, so Open WebUI can connect to it directly.
 
 **Available MCP tools** (provided by server-filesystem):
 - `read_file` — read a file's contents
@@ -26,7 +26,7 @@ Wraps the official `@modelcontextprotocol/server-filesystem` package and bridges
 ## Open WebUI connection
 
 ```
-http://localhost:3001/sse
+http://localhost:3001/mcp
 ```
 
 ## Notes

@@ -6,4 +6,6 @@ PATHS=$(node -e "process.stdout.write((require('/data/options.json').allowed_pat
 
 exec /app/node_modules/.bin/supergateway \
   --port "${PORT}" \
+  --outputTransport streamableHttp \
+  --streamableHttpPath /mcp \
   --stdio "/app/node_modules/.bin/mcp-server-filesystem ${PATHS}"

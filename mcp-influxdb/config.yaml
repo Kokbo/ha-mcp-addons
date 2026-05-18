@@ -1,7 +1,7 @@
 name: MCP InfluxDB Server
-version: "1.0.2"
+version: "1.0.3"
 slug: mcp-influxdb
-description: MCP server for InfluxDB 1.8.x queries via HTTP/SSE
+description: MCP server for InfluxDB 1.8.x queries via Streamable HTTP
 url: https://github.com/Kokbo/ha-mcp-addons
 arch:
   - aarch64
@@ -9,7 +9,7 @@ host_network: true
 ports:
   3004/tcp: 3004
 ports_description:
-  3004/tcp: MCP HTTP/SSE server
+  3004/tcp: MCP Streamable HTTP server
 options:
   port: 3004
   influxdb_url: "http://localhost:8086"

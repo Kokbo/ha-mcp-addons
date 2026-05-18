@@ -43,7 +43,7 @@ mcp-influxdb/
 REQUIREMENTS APPLYING TO ALL ADDONS
 
 - aarch64: true declared in every config.yaml
-- All addons run as HTTP/SSE MCP servers (not stdio) so Open WebUI can connect via http://localhost:<port>
+- All addons run as Streamable HTTP MCP servers (not stdio) so Open WebUI can connect via http://localhost:<port>/mcp
 - Ports declared in config.yaml and exposed as configurable addon options
 - /config mapped via map: config in config.yaml for addons that need filesystem access (mcp-filesystem, mcp-git)
 - Each addon independently installable from the same repository
@@ -56,7 +56,7 @@ ADDON 1: mcp-filesystem
 
 Purpose: expose read/write/list/delete access to /config via MCP.
 
-Implementation: wrap @modelcontextprotocol/server-filesystem (official npm package) as an HTTP/SSE MCP server. Note that the official package runs in stdio mode by default — use a stdio-to-HTTP bridge (e.g. @modelcontextprotocol/sdk's SSE server transport, or supergateway npm package) to expose it over HTTP.
+Implementation: wrap @modelcontextprotocol/server-filesystem (official npm package) as a Streamable HTTP MCP server. Note that the official package runs in stdio mode by default — use a stdio-to-HTTP bridge (e.g. supergateway npm package) to expose it over HTTP.
 
 Config options (config.yaml):
 - port (int, default 3001)
@@ -166,7 +166,7 @@ Complete these tasks in order:
 2. Build mcp-filesystem
    - config.yaml (aarch64, port, allowed_paths, map: config)
    - Dockerfile (node:20-alpine, install deps, copy run.sh)
-   - run.sh (start HTTP/SSE wrapper around @modelcontextprotocol/server-filesystem)
+   - run.sh (start Streamable HTTP wrapper around @modelcontextprotocol/server-filesystem)
    - README.md
 
 3. Build mcp-git

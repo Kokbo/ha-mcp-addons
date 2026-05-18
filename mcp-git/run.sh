@@ -1,4 +1,4 @@
 #!/bin/sh
 set -eu
 
-exec node /app/src/server.js
+exec env MCP_TRANSPORT=streamableHttp node /app/src/server.js

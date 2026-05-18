@@ -2,7 +2,7 @@
 
 Four [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server addons for Home Assistant, extending the capabilities of [ha-mcp](https://github.com/home-assistant-libs/ha-mcp) with filesystem, git, Node-RED, and InfluxDB access.
 
-Each addon runs as an **HTTP/SSE MCP server** consumable by Open WebUI (or any MCP-compatible client) running on the same host via `http://localhost:<port>`.
+Each addon runs as a **Streamable HTTP MCP server** consumable by Open WebUI (or any MCP-compatible client) running on the same host via `http://localhost:<port>/mcp`.
 
 ## Installation
 
@@ -25,10 +25,10 @@ Each addon runs as an **HTTP/SSE MCP server** consumable by Open WebUI (or any M
 Add each addon as an MCP tool server in Open WebUI:
 
 ```
-http://localhost:3001/sse   # mcp-filesystem
-http://localhost:3002/sse   # mcp-git
-http://localhost:3003/sse   # mcp-node-red
-http://localhost:3004/sse   # mcp-influxdb
+http://localhost:3001/mcp   # mcp-filesystem
+http://localhost:3002/mcp   # mcp-git
+http://localhost:3003/mcp   # mcp-node-red
+http://localhost:3004/mcp   # mcp-influxdb
 ```
 
 ## Architecture
