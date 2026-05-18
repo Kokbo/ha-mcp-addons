@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 
 import requests
 import uvicorn
@@ -15,8 +16,9 @@ INFLUXDB_USER = config.get('influxdb_user', '')
 INFLUXDB_PASSWORD = config.get('influxdb_password', '')
 
 AUTH = (INFLUXDB_USER, INFLUXDB_PASSWORD) if INFLUXDB_USER else None
+STATEFUL = os.environ.get("MCP_STATEFUL") == "true" or "--stateful" in sys.argv
 
-mcp = FastMCP("mcp-influxdb", stateless_http=True)
+mcp = FastMCP("mcp-influxdb", stateless_http=not STATEFUL)
 
 
 def influx_query(q: str, database: str) -> dict:
