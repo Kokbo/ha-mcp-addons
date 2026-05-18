@@ -1,9 +1,9 @@
 {
   "name": "mcp-filesystem-addon",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "dependencies": {
-    "@modelcontextprotocol/server-filesystem": "^2.1.0",
-    "supergateway": "^2.9.0"
+    "@modelcontextprotocol/server-filesystem": "^2026.1.14",
+    "supergateway": "^3.4.3"
   }
 }
