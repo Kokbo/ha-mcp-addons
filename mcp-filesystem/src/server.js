@@ -9,7 +9,13 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 import express from 'express';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PKG = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf8'));
+const VERSION = PKG.version;
 
 const config = JSON.parse(readFileSync('/data/options.json', 'utf8'));
 const PORT = config.port ?? 3001;
@@ -24,7 +30,7 @@ const UPSTREAM_BIN = '/app/node_modules/.bin/mcp-server-filesystem';
 // to its CLI-provided allowed directories and never issues a `roots/list`
 // request back to us.
 const upstream = new Client(
-  { name: 'mcp-filesystem-proxy', version: '1.0.7' },
+  { name: 'mcp-filesystem-proxy', version: VERSION },
   { capabilities: {} },
 );
 const upstreamTransport = new StdioClientTransport({
@@ -56,7 +62,7 @@ upstream.fallbackNotificationHandler = async notification => {
 
 function createProxyServer() {
   const server = new Server(
-    { name: 'mcp-filesystem', version: '1.0.7' },
+    { name: 'mcp-filesystem', version: VERSION },
     { capabilities: { tools: { listChanged: true } } },
   );
 
