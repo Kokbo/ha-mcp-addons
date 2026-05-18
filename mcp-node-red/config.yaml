@@ -1,5 +1,5 @@
 name: MCP Node-RED Server
-version: "1.0.6"
+version: "1.0.0"
 slug: mcp-node-red
 description: MCP server for Node-RED flow management via Streamable HTTP
 url: https://github.com/Kokbo/ha-mcp-addons
