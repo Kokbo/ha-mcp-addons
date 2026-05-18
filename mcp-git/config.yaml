@@ -1,7 +1,7 @@
 name: MCP Git Server
-version: "1.0.2"
+version: "1.0.3"
 slug: mcp-git
-description: MCP server exposing git operations on /config via HTTP/SSE
+description: MCP server exposing git operations on /config via Streamable HTTP
 url: https://github.com/Kokbo/ha-mcp-addons
 arch:
   - aarch64
@@ -9,7 +9,7 @@ host_network: true
 ports:
   3002/tcp: 3002
 ports_description:
-  3002/tcp: MCP HTTP/SSE server
+  3002/tcp: MCP Streamable HTTP server
 map:
   - config:rw
 options:

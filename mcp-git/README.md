@@ -1,10 +1,10 @@
 # MCP Git Server
 
-Home Assistant addon exposing git operations on `/config` via an HTTP/SSE MCP server.
+Home Assistant addon exposing git operations on `/config` via a Streamable HTTP MCP server.
 
 ## What it does
 
-Custom MCP server built with `simple-git` (Node.js) that exposes git operations on a local repository as MCP tools, served over HTTP/SSE.
+Custom MCP server built with `simple-git` (Node.js) that exposes git operations on a local repository as MCP tools, served over Streamable HTTP.
 
 **Available MCP tools:**
 
@@ -38,5 +38,5 @@ The public key must be added to your GitHub/GitLab account.
 ## Open WebUI connection
 
 ```
-http://localhost:3002/sse
+http://localhost:3002/mcp
 ```

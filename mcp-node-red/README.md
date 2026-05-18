@@ -1,6 +1,6 @@
 # MCP Node-RED Server
 
-Home Assistant addon for managing Node-RED flows via an HTTP/SSE MCP server.
+Home Assistant addon for managing Node-RED flows via a Streamable HTTP MCP server.
 
 ## What it does
 
@@ -33,5 +33,5 @@ If `node_red_user` and `node_red_password` are set, the server obtains a bearer 
 ## Open WebUI connection
 
 ```
-http://localhost:3003/sse
+http://localhost:3003/mcp
 ```

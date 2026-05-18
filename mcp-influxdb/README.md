@@ -1,6 +1,6 @@
 # MCP InfluxDB Server
 
-Home Assistant addon for querying InfluxDB 1.8.x via an HTTP/SSE MCP server.
+Home Assistant addon for querying InfluxDB 1.8.x via a Streamable HTTP MCP server.
 
 ## What it does
 
@@ -38,5 +38,5 @@ list_measurements: (shows all sensors recorded by HA recorder)
 ## Open WebUI connection
 
 ```
-http://localhost:3004/sse
+http://localhost:3004/mcp
 ```
