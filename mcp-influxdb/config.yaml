@@ -1,5 +1,5 @@
 name: MCP InfluxDB Server
-version: "1.0.0"
+version: "1.0.1"
 slug: mcp-influxdb
 description: MCP server for InfluxDB 1.8.x queries via HTTP/SSE
 url: https://github.com/Kokbo/ha-mcp-addons
