@@ -1,6 +1,6 @@
 {
   "name": "mcp-filesystem-addon",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "dependencies": {
     "@modelcontextprotocol/server-filesystem": "^2026.1.14",

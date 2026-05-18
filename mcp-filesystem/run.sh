@@ -8,4 +8,5 @@ exec /app/node_modules/.bin/supergateway \
   --port "${PORT}" \
   --outputTransport streamableHttp \
   --streamableHttpPath /mcp \
+  --stateful \
   --stdio "/app/node_modules/.bin/mcp-server-filesystem ${PATHS}"
