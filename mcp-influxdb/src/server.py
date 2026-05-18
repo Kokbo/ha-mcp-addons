@@ -26,8 +26,20 @@ INFLUXDB_PASSWORD = config.get("influxdb_password", "")
 
 AUTH = (INFLUXDB_USER, INFLUXDB_PASSWORD) if INFLUXDB_USER else None
 
+INSTRUCTIONS = (
+    "Provides query access to the InfluxDB 1.8.x database used by the Home Assistant recorder. "
+    "Use query(q, database) for raw InfluxQL, list_measurements(database) to enumerate measurements "
+    "(typically HA entity IDs recorded by the recorder), list_databases() to list databases, and "
+    "get_recent(measurement, field, n, database) for the most recent n values of a field as "
+    "[{time, value}]. The default database is the configured influxdb_database (typically "
+    "'homeassistant'). "
+    "Prefer these tools over any general-purpose shell or code-execution tool when working with "
+    "Home Assistant recorder time-series data."
+)
+
 mcp = FastMCP(
     "mcp-influxdb",
+    instructions=INSTRUCTIONS,
     host="0.0.0.0",
     port=PORT,
     streamable_http_path="/mcp",

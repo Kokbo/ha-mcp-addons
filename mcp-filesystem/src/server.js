@@ -60,10 +60,20 @@ upstream.fallbackNotificationHandler = async notification => {
   }
 };
 
+const INSTRUCTIONS = [
+  'Provides read/write filesystem access to the Home Assistant configuration directory at /config (inside the addon container).',
+  'Use these tools — read_text_file, read_multiple_files, write_file, edit_file, create_directory, list_directory, list_directory_with_sizes, directory_tree, move_file, search_files, get_file_info, list_allowed_directories — for any access to Home Assistant configuration files.',
+  'All paths must start with /config/...; never use /homeassistant/... or any host-side path — only the in-container /config view exists.',
+  'Prefer these tools over any general-purpose shell or code-execution tool when working with HA configuration files.',
+].join(' ');
+
 function createProxyServer() {
   const server = new Server(
     { name: 'mcp-filesystem', version: VERSION },
-    { capabilities: { tools: { listChanged: true } } },
+    {
+      capabilities: { tools: { listChanged: true } },
+      instructions: INSTRUCTIONS,
+    },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => cachedTools);
