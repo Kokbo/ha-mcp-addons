@@ -6,6 +6,8 @@ Home Assistant addon for querying InfluxDB 1.8.x via a Streamable HTTP MCP serve
 
 Custom MCP server (Python) that calls the InfluxDB HTTP API directly using raw HTTP requests — no InfluxDB client library — for maximum compatibility with InfluxDB 1.8.x.
 
+The server is served over **MCP Streamable HTTP** directly via the official Python `mcp` SDK (`FastMCP.streamable_http_app()`) mounted at `/mcp` on uvicorn — no `supergateway`, no stdio bridge. It only advertises the `tools` server capability and never issues `roots/list` requests to the client.
+
 **Available MCP tools:**
 
 | Tool | Description |

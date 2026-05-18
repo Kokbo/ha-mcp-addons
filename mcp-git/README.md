@@ -4,7 +4,7 @@ Home Assistant addon exposing git operations on `/config` via a Streamable HTTP 
 
 ## What it does
 
-Custom MCP server built with `simple-git` (Node.js) that exposes git operations on a local repository as MCP tools, served over Streamable HTTP.
+Custom MCP server built with `simple-git` (Node.js) that exposes git operations on a local repository as MCP tools, served over **MCP Streamable HTTP** directly — no `supergateway`, no stdio bridge. The server uses `@modelcontextprotocol/sdk`'s native `StreamableHTTPServerTransport` mounted on an Express HTTP server at `/mcp`. It only advertises the `tools` server capability, so it never issues `roots/list` requests to the client.
 
 **Available MCP tools:**
 
